@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kvant Mushuklari</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a1a;
+            overflow: hidden;
+            font-family: system-ui, -apple-system, sans-serif;
+            color: white;
+            touch-action: none;
+        }
+        #game {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        .cat {
+            position: absolute;
+            font-size: 42px;
+            cursor: pointer;
+            transition: transform 0.12s;
+            user-select: none;
+            filter: drop-shadow(0 0 8px rgba(255,255,255,0.3));
+        }
+        .cat:active { transform: scale(1.4); }
+        #ui {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            right: 14px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+            z-index: 10;
+            text-shadow: 0 0 10px #000;
+            font-weight: 600;
+        }
+        #effect {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 26px;
+            font-weight: bold;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            text-align: center;
+            text-shadow: 0 0 20px #ff6b6b;
+            z-index: 15;
+        }
+        #start-screen, #gameover {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.88);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            z-index: 20;
+            padding: 20px;
+        }
+        button {
+            background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+            border: none;
+            padding: 16px 42px;
+            font-size: 20px;
+            border-radius: 50px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(255,107,107,0.4);
+        }
+        button:active { transform: scale(0.96); }
+        h1 { font-size: 30px; text-align: center; }
+        p { text-align: center; max-width: 290px; opacity: 0.85; line-height: 1.45; }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <div id="ui">
+            <div>Skor: <span id="score">0</span></div>
+            <div>Rekord: <span id="record">0</span></div>
+        </div>
+        <div id="effect"></div>
+
+        <div id="start-screen">
+            <h1>🐱 Kvant Mushuklari</h1>
+            <p>
+                Noodatiy effektli mushuklarni tuting!<br>
+                Har 10 soniyada yangi g‘alati narsa bo‘ladi
+            </p>
+            <button onclick="startGame()">Boshlash</button>
+        </div>
+
+        <div id="gameover" style="display:none">
+            <h1>O‘yin tugadi!</h1>
+            <p>Sizning skor: <span id="final-score">0</span></p>
+            <button onclick="startGame()">Yana o‘ynash</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        tg.setHeaderColor('#0a0a1a');
+        tg.setBackgroundColor('#0a0a1a');
+
+        let score = 0;
+        let record = localStorage.getItem('kvantRecord') || 0;
+        document.getElementById('record').textContent = record;
+
+        let cats = [];
+        let gameRunning = false;
+        let spawnInterval, effectInterval;
+        let timeScale = 1;
+        let gravity = 1;
+        let rotateScreen = false;
+        let scoreMultiplier = 1;
+
+        const effects = [
+            { name: "⏱ Vaqt sekinlashdi!", fn: () => timeScale = 0.35 },
+            { name: "🌀 Ekran aylanmoqda!", fn: () => rotateScreen = true },
+            { name: "⬆️ Gravitasya o‘zgardi!", fn: () => gravity = -1 },
+            { name: "🔥 Ikki baravar skor!", fn: () => scoreMultiplier = 2 },
+            { name: "👻 Mushuklar g‘oyib!", fn: () => cats.forEach(c => c.el.style.opacity = 0.15) },
+            { name: "🐘 Katta mushuklar!", fn: () => cats.forEach(c => c.el.style.fontSize = '72px') },
+            { name: "⚡ Super tezlik!", fn: () => timeScale = 2.2 },
+        ];
+
+        function showEffect(text) {
+            const el = document.getElementById('effect');
+            el.textContent = text;
+            el.style.opacity = 1;
+            setTimeout(() => el.style.opacity = 0, 2000);
+        }
+
+        function createCat() {
+            if (!gameRunning) return;
+            const el = document.createElement('div');
+            el.className = 'cat';
+            el.textContent = ['🐱','🐈','😺','😸','😹','😻','😼','🙀'][Math.floor(Math.random()*8)];
+            el.style.left = Math.random() * (window.innerWidth - 55) + 'px';
+            el.style.top = gravity > 0 ? '-70px' : (window.innerHeight + 30) + 'px';
+            
+            const speed = (1.6 + Math.random() * 2.8) * timeScale * gravity;
+            const cat = { el, y: parseFloat(el.style.top), speed, caught: false };
+            
+            el.onclick = () => {
+                if (cat.caught || !gameRunning) return;
+                cat.caught = true;
+                score += 10 * scoreMultiplier;
+                document.getElementById('score').textContent = score;
+                el.style.transform = 'scale(0) rotate(180deg)';
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 180);
+                cats = cats.filter(c => c !== cat);
+                if (navigator.vibrate) navigator.vibrate(25);
+            };
+
+            document.getElementById('game').appendChild(el);
+            cats.push(cat);
+        }
+
+        function update() {
+            if (!gameRunning) return;
+            cats.forEach(cat => {
+                cat.y += cat.speed;
+                cat.el.style.top = cat.y + 'px';
+                if ((gravity > 0 && cat.y > window.innerHeight + 60) || 
+                    (gravity < 0 && cat.y < -90)) {
+                    cat.el.remove();
+                    cats = cats.filter(c => c !== cat);
+                    endGame();
+                }
+            });
+            if (rotateScreen) {
+                document.body.style.transform = `rotate(${(Date.now()/25) % 360}deg)`;
+            }
+            requestAnimationFrame(update);
+        }
+
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('gameover').style.display = 'none';
+            score = 0;
+            scoreMultiplier = 1;
+            timeScale = 1;
+            gravity = 1;
+            rotateScreen = false;
+            document.body.style.transform = '';
+            document.getElementById('score').textContent = 0;
+            cats.forEach(c => c.el.remove());
+            cats = [];
+            gameRunning = true;
+
+            spawnInterval = setInterval(createCat, 680);
+            effectInterval = setInterval(() => {
+                const eff = effects[Math.floor(Math.random() * effects.length)];
+                showEffect(eff.name);
+                eff.fn();
+                setTimeout(() => {
+                    timeScale = 1;
+                    gravity = 1;
+                    rotateScreen = false;
+                    scoreMultiplier = 1;
+                    document.body.style.transform = '';
+                    cats.forEach(c => {
+                        c.el.style.opacity = 1;
+                        c.el.style.fontSize = '42px';
+                    });
+                }, 4200);
+            }, 10000);
+
+            update();
+        }
+
+        function endGame() {
+            if (!gameRunning) return;
+            gameRunning = false;
+            clearInterval(spawnInterval);
+            clearInterval(effectInterval);
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('gameover').style.display = 'flex';
+            
+            if (score > record) {
+                record = score;
+                localStorage.setItem('kvantRecord', record);
+                document.getElementById('record').textContent = record;
+            }
+
+            // Natijani botga yuborish
+            try {
+                tg.sendData(JSON.stringify({ score: score }));
+            } catch (e) {}
+        }
+    </script>
+</body>
+</html>

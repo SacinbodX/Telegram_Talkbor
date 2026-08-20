@@ -1,0 +1,19 @@
+{
+  "name": "kvant-mushuklari-bot",
+  "version": "1.0.0",
+  "description": "Noodatiy Telegram Mini App o'yini - Kvant Mushuklari",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "node bot.js"
+  },
+  "dependencies": {
+    "telegraf": "^4.16.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["telegram", "bot", "mini-app", "game"],
+  "author": "",
+  "license": "MIT"
+}
