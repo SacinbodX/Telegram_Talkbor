@@ -1,125 +1,17 @@
-const socket = io();
-
-const localVideo = document.getElementById('localVideo');
-const remoteVideo = document.getElementById('remoteVideo');
-const startBtn = document.getElementById('startBtn');
-const nextBtn = document.getElementById('nextBtn');
-const stopBtn = document.getElementById('stopBtn');
-const reportBtn = document.getElementById('reportBtn');
-const statusEl = document.getElementById('status');
-
-let localStream = null;
-let pc = null;
-
-const rtcConfig = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' }
-  ]
-};
-
-function setButtons({ start, next, stop, report }) {
-  startBtn.disabled = !start;
-  nextBtn.disabled = !next;
-  stopBtn.disabled = !stop;
-  reportBtn.disabled = !report;
-}
-
-async function getLocalMedia() {
-  if (localStream) return localStream;
-  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  localVideo.srcObject = localStream;
-  return localStream;
-}
-
-function createPeerConnection() {
-  pc = new RTCPeerConnection(rtcConfig);
-  localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
-
-  pc.ontrack = (e) => { remoteVideo.srcObject = e.streams[0]; };
-
-  pc.onicecandidate = (e) => {
-    if (e.candidate) socket.emit('signal', { type: 'candidate', candidate: e.candidate });
-  };
-}
-
-async function startAsInitiator() {
-  createPeerConnection();
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  socket.emit('signal', { type: 'offer', offer });
-}
-
-function closePeer() {
-  if (pc) { pc.close(); pc = null; }
-  remoteVideo.srcObject = null;
-}
-
-socket.on('waiting', () => {
-  statusEl.textContent = 'Qidirilmoqda...';
-  setButtons({ start: false, next: false, stop: true, report: false });
-});
-
-socket.on('matched', async ({ initiator }) => {
-  statusEl.textContent = 'Ulandi';
-  setButtons({ start: false, next: true, stop: true, report: true });
-  if (initiator) await startAsInitiator();
-  else createPeerConnection();
-});
-
-socket.on('signal', async (data) => {
-  if (!pc) return;
-  if (data.type === 'offer') {
-    await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    socket.emit('signal', { type: 'answer', answer });
-  } else if (data.type === 'answer') {
-    await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-  } else if (data.type === 'candidate') {
-    try { await pc.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (e) {}
-  }
-});
-
-socket.on('partner-left', () => {
-  statusEl.textContent = 'Suhbatdosh chiqdi, qidirilmoqda...';
-  closePeer();
-  setButtons({ start: false, next: false, stop: true, report: false });
-  socket.emit('find-partner');
-});
-
-startBtn.onclick = async () => {
-  try {
-    await getLocalMedia();
-  } catch (e) {
-    statusEl.textContent = 'Kamera/mikrofon ruxsati kerak';
-    return;
-  }
-  socket.emit('find-partner');
-  setButtons({ start: false, next: false, stop: true, report: false });
-};
-
-nextBtn.onclick = () => {
-  closePeer();
-  statusEl.textContent = 'Keyingisi qidirilmoqda...';
-  setButtons({ start: false, next: false, stop: true, report: false });
-  socket.emit('next');
-};
-
-stopBtn.onclick = () => {
-  closePeer();
-  socket.emit('stop');
-  if (localStream) {
-    localStream.getTracks().forEach((t) => t.stop());
-    localStream = null;
-  }
-  localVideo.srcObject = null;
-  statusEl.textContent = 'Tayyor';
-  setButtons({ start: true, next: false, stop: false, report: false });
-};
-
-reportBtn.onclick = () => {
-  socket.emit('report');
-  reportBtn.textContent = 'Yuborildi';
-  setTimeout(() => { reportBtn.textContent = 'Shikoyat'; }, 1500);
-};
+const socket=io();
+const tg=window.Telegram?.WebApp; tg?.ready(); tg?.expand();
+const $=s=>document.querySelector(s); const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let me=null, replyTo=null, media=null, voiceRoom='lobby';
+const texts={uz:['Til','Yoshingiz','Jinsingiz','Davom etish','Asosiy chat','Kontaktlar','Ovozli xona','Xabar yozing...'],en:['Language','Your age','Gender','Continue','Main chat','Contacts','Voice room','Write a message...'],ru:['Язык','Ваш возраст','Пол','Продолжить','Главный чат','Контакты','Голосовая комната','Введите сообщение...'],tr:['Dil','Yaşınız','Cinsiyet','Devam','Ana sohbet','Kişiler','Sesli oda','Mesaj yazın...']};
+function applyLang(){const a=texts[$('#language').value]||texts.en; document.querySelectorAll('[data-t]').forEach((e,i)=>e.textContent=a[i]||e.textContent); $('#messageInput').placeholder=a[7];}
+$('#language').onchange=applyLang; applyLang();
+$('#profileForm').onsubmit=e=>{e.preventDefault(); const age=+$('#age').value;if(age<13||age>120)return alert('Yoshni to‘g‘ri kiriting.'); const tu=tg?.initDataUnsafe?.user||{}; socket.emit('register',{initData:tg?.initData||'',telegramUser:tu,name:$('#name').value.trim(),age,gender:$('#gender').value,language:$('#language').value},r=>{if(!r.ok)return alert(r.error||'Xatolik');me=r.user;$('#onboarding').classList.add('hidden');$('#app').classList.remove('hidden');loadHistory();});};
+function loadHistory(){socket.emit('get-history',null,arr=>arr.forEach(renderMessage));}
+function renderMessage(m){if(m.deleted||document.querySelector(`[data-mid="${m.id}"]`))return;const mine=m.from===me?.id;const el=document.createElement('article');el.className='msg '+(mine?'mine':'');el.dataset.mid=m.id;el.innerHTML=`<div class="bubble"><b>${mine?'Siz':esc(m.from)}</b><div class="reply">${m.replyTo?'↪ javob': ''}</div><div>${esc(m.text)}</div><small>${new Date(m.createdAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</small>${mine?'<button class="del">🗑</button>':''}</div>`;el.onclick=ev=>{if(ev.target.classList.contains('del'))socket.emit('delete-message',{id:m.id});else if(!ev.target.closest('button')){replyTo=m.id;$('#replyBar').textContent='↪ Xabarga javob berish · bekor qilish';$('#replyBar').classList.remove('hidden');}};$('#messages').append(el);el.scrollIntoView({block:'end'});}
+socket.on('message',renderMessage);socket.on('message-deleted',({id})=>document.querySelector(`[data-mid="${id}"]`)?.remove());
+$('#composer').onsubmit=e=>{e.preventDefault();const text=$('#messageInput').value.trim();if(!text)return;socket.emit('send-message',{text,replyTo},()=>{});$('#messageInput').value='';replyTo=null;$('#replyBar').classList.add('hidden');};
+$('#replyBar').onclick=()=>{replyTo=null;$('#replyBar').classList.add('hidden');};
+$('.nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.panel').forEach(x=>x.classList.add('hidden'));$('#'+b.dataset.panel).classList.remove('hidden');};
+$('#joinVoice').onclick=async()=>{try{media=await navigator.mediaDevices.getUserMedia({audio:true});$('#voiceState').textContent='Mikrofon ulandi. Bu minimal WebRTC signaling asosidir.';socket.emit('join-room',{roomId:voiceRoom});$('#leaveVoice').classList.remove('hidden');}catch{alert('Mikrofon ruxsati kerak');}};
+$('#leaveVoice').onclick=()=>{media?.getTracks().forEach(t=>t.stop());media=null;$('#voiceState').textContent='Xonaga kirmagansiz';$('#leaveVoice').classList.add('hidden');};
+socket.on('presence',({user,online})=>{if(user.id===me?.id)return;let el=document.querySelector(`[data-uid="${user.id}"]`);if(!el){el=document.createElement('div');el.dataset.uid=user.id;$('#contactsList').append(el);}el.textContent=`${user.name} ${online?'● online':'○ offline'}`;});
