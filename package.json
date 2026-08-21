@@ -1,16 +1,14 @@
 {
-  "name": "qiziqarli-telegram-bot",
+  "name": "talkbor-mini-app",
   "version": "1.0.0",
-  "description": "Ko'p funksiyali qiziqarli Telegram bot",
-  "main": "bot.js",
+  "description": "Telegram Mini App Random Video Chat",
+  "main": "index.js",
   "scripts": {
-    "start": "node bot.js"
+    "start": "node index.js"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
-    "node-telegram-bot-api": "^0.66.0"
-  },
-  "engines": {
-    "node": ">=18"
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5",
+    "telegraf": "^4.16.3"
   }
 }
