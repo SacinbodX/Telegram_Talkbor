@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>RandomChat</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- CONNECTION INFO BAR (Outlook-uslubidagi sariq status satri) -->
+  <div id="connBanner" class="conn-banner">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11A8 8 0 1 0 18.5 16"/><polyline points="20 4 20 11 13 11"/></svg>
+    <span>Qayta ulanmoqda...</span>
+  </div>
+
+  <!-- TITLE BAR -->
+  <header class="title-bar">
+    <svg class="icon title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4V5z"/></svg>
+    <span class="title-text">RandomChat</span>
+  </header>
+
+  <main id="app">
+    <!-- HOME -->
+    <section id="screen-home" class="screen active">
+      <div class="panel home-panel">
+        <div class="home-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4V5z"/></svg>
+        </div>
+        <h1 class="logo">RandomChat</h1>
+        <p class="tagline">Tasodifiy suhbatdosh toping. Yoqsa, do'stlar ro'yxatiga qo'shing.</p>
+        <button id="btnFind" class="btn btn-primary btn-block">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          <span>Suhbatdosh topish</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- SEARCH -->
+    <section id="screen-search" class="screen">
+      <div class="panel search-panel">
+        <div class="spinner-office" aria-hidden="true"></div>
+        <h2 class="search-title">Suhbatdosh qidirilmoqda...</h2>
+        <p class="search-sub">Iltimos, biroz kuting</p>
+        <button id="btnCancelSearch" class="btn btn-outline">Bekor qilish</button>
+      </div>
+    </section>
+
+    <!-- CHAT -->
+    <section id="screen-chat" class="screen">
+      <header class="chat-header">
+        <div class="partner-info">
+          <div class="avatar" id="partnerAvatar">?</div>
+          <div class="partner-text">
+            <div class="partner-name" id="partnerName">Notanish</div>
+            <div class="partner-status"><span class="presence-dot"></span>Onlayn</div>
+          </div>
+        </div>
+        <div class="chat-actions" role="toolbar">
+          <button id="btnLike" class="icon-btn" title="Yoqtirish / do'st qo'shish">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.35-9.5-8.5C0.8 8.2 2.3 5 5.6 5c1.8 0 3.2 1 4.4 2.6C11.2 6 12.6 5 14.4 5c3.3 0 4.8 3.2 3.1 6.5C19 15.65 12 20 12 20z"/></svg>
+          </button>
+          <button id="btnReport" class="icon-btn" title="Shikoyat qilish">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 4h11l-2.5 3.5L16 11H5"/></svg>
+          </button>
+          <button id="btnSkip" class="icon-btn" title="Keyingisi">
+            <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5l9 7-9 7V5z"/><rect x="17" y="5" width="2" height="14"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="messages" id="messages"></div>
+
+      <form class="chat-input-bar" id="chatForm">
+        <input id="msgInput" type="text" placeholder="Xabar yozing..." autocomplete="off" maxlength="2000" />
+        <button type="submit" class="btn-send" id="btnSend" aria-label="Yuborish">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2.5-7.5L3 11z"/></svg>
+        </button>
+      </form>
+    </section>
+
+    <!-- FRIENDS -->
+    <section id="screen-friends" class="screen">
+      <h2 class="section-title">Do'stlarim</h2>
+      <div id="friendsList" class="friends-list">
+        <p class="empty-hint">Hali do'stlaringiz yo'q.<br />Suhbatda yurak belgisini bosib do'st qo'shing.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- REPORT MODAL (Office dialog uslubida) -->
+  <div id="reportModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-titlebar">Shikoyat yuborish</div>
+      <div class="modal-body">
+        <p class="modal-sub">Sabab adminga yuboriladi, admin sizga javob yozishi mumkin.</p>
+        <textarea id="reportReason" rows="3" placeholder="Nima uchun shikoyat qilyapsiz?"></textarea>
+        <div class="modal-actions">
+          <button id="btnReportSend" class="btn btn-primary">Yuborish</button>
+          <button id="btnReportCancel" class="btn btn-outline">Bekor qilish</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MATCH NOTIFICATION (Outlook "yangi xabar" uslubida) -->
+  <div id="matchToast" class="toast">
+    <svg class="icon toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 9 17 20 6"/></svg>
+    <div>
+      <div class="toast-title">Yangi do'st qo'shildi</div>
+      <div class="toast-sub" id="toastSub"></div>
+    </div>
+  </div>
+
+  <nav class="tabbar">
+    <button class="tab-btn active" data-tab="home">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4V5z"/></svg>
+      <span class="tab-label">Suhbat</span>
+    </button>
+    <button class="tab-btn" data-tab="friends">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3l2.6 5.8 6.4.6-4.8 4.3 1.4 6.3L12 16.9 6.4 20l1.4-6.3L3 9.4l6.4-.6L12 3z"/></svg>
+      <span class="tab-label">Do'stlar</span>
+    </button>
+  </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>
